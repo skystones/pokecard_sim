@@ -34,6 +34,8 @@ def train(args) -> None:
 
     opt = optim.Adam(model.parameters(), lr=args.lr)
     logs = []
+    hard_success_count = 0
+    total_invalid_actions = 0
 
     for ep in range(args.episodes):
         obs, _ = env.reset(seed=args.seed + ep)
@@ -54,7 +56,27 @@ def train(args) -> None:
             opt.step()
             obs = obs2
             ep_reward += reward
-        logs.append({"episode": ep, "reward": ep_reward, "hard_success": bool(info.get("hard_success", False))})
+        hard_success = bool(info.get("hard_success", False))
+        hard_success_count += int(hard_success)
+        total_invalid_actions += int(info.get("invalid_action_count", 0))
+        logs.append(
+            {
+                "episode": ep,
+                "reward": ep_reward,
+                "hard_success": hard_success,
+                "invalid_action_count": int(info.get("invalid_action_count", 0)),
+            }
+        )
+
+    logs.append(
+        {
+            "summary": True,
+            "episodes": args.episodes,
+            "hard_success_rate": hard_success_count / max(1, args.episodes),
+            "invalid_action_rate_per_episode": total_invalid_actions / max(1, args.episodes),
+            "seed": args.seed,
+        }
+    )
 
     Path(args.out_model).parent.mkdir(parents=True, exist_ok=True)
     torch.save({"model": model.state_dict(), "obs_dim": obs_dim, "act_dim": act_dim}, args.out_model)
