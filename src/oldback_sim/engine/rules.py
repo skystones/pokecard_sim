@@ -16,6 +16,15 @@ TRAINERS = {
     "etiquette", "recycle", "warp_point",
 }
 ENERGIES = {"water_energy", "full_heal_energy"}
+DEFAULT_SEARCH_PRIORITY = [
+    "gastly_expansion_sheet",
+    "voltorb_expansion_sheet",
+    "rattata_team_rocket",
+    "ditto_expansion_sheet",
+    "shining_raichu",
+    "unown_e_pf2",
+    "shining_kabutops",
+]
 
 
 def _base(card_instance: str) -> str:
@@ -24,6 +33,11 @@ def _base(card_instance: str) -> str:
 
 def _is_status_blocked(p: str, ps) -> bool:
     return bool(ps.used_flags.get(f"status_sleep::{p}")) or bool(ps.used_flags.get(f"status_paralyzed::{p}"))
+
+
+def _search_priority_in_deck(p, priority: list[str]) -> list[str]:
+    deck_bases = {_base(c) for c in p.deck}
+    return [card_id for card_id in priority if card_id in deck_bases]
 
 
 def legal_set_active_from_hand_actions(state: GameState, player_id: str) -> list[Action]:
@@ -66,11 +80,14 @@ def legal_trainer_actions(state: GameState, player_id: str) -> list[Action]:
         b = _base(c)
         if b not in TRAINERS:
             continue
-        if b == "pokemon_trader" and (not any(_base(h) in BASIC_POKEMON for h in p.hand if h != c) or not any(_base(d) in BASIC_POKEMON for d in p.deck)):
+        if b == "pokemon_trader" and not any(_base(h) in BASIC_POKEMON for h in p.hand if h != c):
             continue
         if b == "recycle" and len(p.discard) == 0:
             continue
-        actions.append(Action(kind=ActionKind.PLAY_TRAINER, actor_player_id=player_id, card_instance_id=c, card_id=b, source_zone=Zone.HAND))
+        params = {}
+        if b in {"pokemon_trader", "etiquette"}:
+            params["target_priority"] = _search_priority_in_deck(p, DEFAULT_SEARCH_PRIORITY)
+        actions.append(Action(kind=ActionKind.PLAY_TRAINER, actor_player_id=player_id, card_instance_id=c, card_id=b, source_zone=Zone.HAND, params=params))
     return actions
 
 
@@ -93,12 +110,13 @@ def legal_retreat_actions(state: GameState, player_id: str) -> list[Action]:
 
 def legal_pokemon_power_actions(state: GameState, player_id: str) -> list[Action]:
     p = state.players[player_id]
-    if state.global_effects.get("sticky_gas_active"):
+    sticky_gas_blocked = set(state.global_effects.get("sticky_gas_blocked", []))
+    if state.global_effects.get("sticky_gas_active") and not sticky_gas_blocked:
         return []
     out: list[Action] = []
     in_play = ([p.active] if p.active else []) + p.bench
     for poke in in_play:
-        if poke is None or _is_status_blocked(poke, p) or p.used_flags.get(f"status_confused::{poke}"):
+        if poke is None or poke in sticky_gas_blocked or _is_status_blocked(poke, p) or p.used_flags.get(f"status_confused::{poke}"):
             continue
         eff = p.used_flags.get(f"transform_target::{poke}", _base(poke))
         if eff == "ditto_expansion_sheet" and poke == p.active and not p.used_flags.get(f"used_power::great_transform::{poke}"):
