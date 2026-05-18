@@ -32,6 +32,7 @@
   jp_name: マルマイン
   set_name: 第一弾
   category: pokemon
+  evolves_from: voltorb_expansion_sheet
   count_in_target_deck: 1
   reviewed: false
   guessed: false

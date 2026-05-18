@@ -79,3 +79,41 @@ def test_attack_actions_and_end_turn_gate():
     assert any(a.kind == ActionKind.END_TURN for a in legal_actions(s, "self"))
     s.global_effects["pending_choice"] = True
     assert not any(a.kind == ActionKind.END_TURN for a in legal_actions(s, "self"))
+
+
+def test_evolve_from_hand_legal_only_after_next_turn():
+    s = _state(
+        PlayerState(
+            active="voltorb_expansion_sheet#1",
+            hand=["electrode_base#1"],
+            used_flags={"in_play_turn::voltorb_expansion_sheet#1": 1},
+        )
+    )
+    s.turn = 2
+    evolve = [a for a in legal_actions(s, "self") if a.kind == ActionKind.EVOLVE_FROM_HAND]
+    assert len(evolve) == 1
+
+    s_same_turn = _state(
+        PlayerState(
+            active="voltorb_expansion_sheet#1",
+            hand=["electrode_base#1"],
+            used_flags={"in_play_turn::voltorb_expansion_sheet#1": 2},
+        )
+    )
+    s_same_turn.turn = 2
+    assert not [a for a in legal_actions(s_same_turn, "self") if a.kind == ActionKind.EVOLVE_FROM_HAND]
+
+
+def test_ditto_cannot_evolve_even_after_great_transform():
+    s = _state(
+        PlayerState(
+            active="ditto_expansion_sheet#1",
+            hand=["electrode_base#1"],
+            used_flags={
+                "in_play_turn::ditto_expansion_sheet#1": 1,
+                "transform_target::ditto_expansion_sheet#1": "voltorb_expansion_sheet",
+            },
+        )
+    )
+    s.turn = 2
+    assert not [a for a in legal_actions(s, "self") if a.kind == ActionKind.EVOLVE_FROM_HAND]

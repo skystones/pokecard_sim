@@ -17,6 +17,7 @@ class CardDef:
     source_urls: list[str] | None = None
     notes: str = ""
     implemented_effects: list[str] | None = None
+    evolves_from: str = ""
 
 
 def _parse_scalar(v: str):

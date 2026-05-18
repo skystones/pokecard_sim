@@ -3,6 +3,7 @@ from __future__ import annotations
 from itertools import combinations
 
 from oldback_sim.engine.actions import Action, ActionKind, PokemonTarget
+from oldback_sim.cards.card_registry import load_card_defs
 from oldback_sim.engine.state import GameState
 from oldback_sim.engine.zones import Zone
 
@@ -25,6 +26,8 @@ DEFAULT_SEARCH_PRIORITY = [
     "unown_e_pf2",
     "shining_kabutops",
 ]
+
+CARD_DEFS = load_card_defs("src/oldback_sim/cards/card_defs.yaml")
 
 
 def _base(card_instance: str) -> str:
@@ -69,6 +72,37 @@ def legal_attach_energy_actions(state: GameState, player_id: str) -> list[Action
             zone, idx = ("active", None) if i == 0 and p.active else ("bench", i - (1 if p.active else 0))
             actions.append(Action(kind=ActionKind.ATTACH_ENERGY, actor_player_id=player_id, card_instance_id=c, card_id=_base(c), source_zone=Zone.HAND, target=PokemonTarget(player_id, zone, idx, tgt)))
     return actions
+
+
+def legal_evolve_from_hand_actions(state: GameState, player_id: str) -> list[Action]:
+    p = state.players[player_id]
+    in_play_targets = ([p.active] if p.active else []) + list(p.bench)
+    if not in_play_targets:
+        return []
+    out: list[Action] = []
+    for hand_card in p.hand:
+        evolve_to = _base(hand_card)
+        evolves_from = (CARD_DEFS.get(evolve_to).evolves_from if CARD_DEFS.get(evolve_to) else "") or ""
+        if not evolves_from:
+            continue
+        for i, tgt in enumerate(in_play_targets):
+            if tgt is None:
+                continue
+            if _base(tgt) != evolves_from:
+                continue
+            in_play_turn = int(p.used_flags.get(f"in_play_turn::{tgt}", state.turn))
+            if in_play_turn >= state.turn:
+                continue
+            zone, idx = ("active", None) if i == 0 and p.active else ("bench", i - (1 if p.active else 0))
+            out.append(Action(
+                kind=ActionKind.EVOLVE_FROM_HAND,
+                actor_player_id=player_id,
+                card_instance_id=hand_card,
+                card_id=evolve_to,
+                source_zone=Zone.HAND,
+                target=PokemonTarget(player_id, zone, idx, tgt),
+            ))
+    return out
 
 
 def legal_trainer_actions(state: GameState, player_id: str) -> list[Action]:
@@ -174,7 +208,7 @@ def legal_actions(state: GameState, player_id: str = "self", observation=None) -
     if state.global_effects.get("pending_choice"):
         return []
     actions = []
-    for fn in (legal_set_active_from_hand_actions, legal_bench_basic_actions, legal_attach_energy_actions, legal_trainer_actions, legal_retreat_actions, legal_pokemon_power_actions, legal_attack_actions):
+    for fn in (legal_set_active_from_hand_actions, legal_bench_basic_actions, legal_evolve_from_hand_actions, legal_attach_energy_actions, legal_trainer_actions, legal_retreat_actions, legal_pokemon_power_actions, legal_attack_actions):
         actions.extend(fn(state, player_id))
     actions.append(Action(kind=ActionKind.END_TURN, actor_player_id=player_id))
     return actions
