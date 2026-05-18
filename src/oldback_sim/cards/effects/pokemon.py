@@ -37,6 +37,7 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
     opp = ctx.state.players[ctx.opponent_player_id]
 
     if effect_id == "thunder_squall":
+        ctx.event_log.add("attack_used", {"attacker": me.active, "attack": "サンダースコール"}, ctx.state.turn)
         if opp.active:
             ctx.event_log.add("damage", {"target": opp.active, "amount": 40}, ctx.state.turn)
         if opp.bench:
@@ -73,6 +74,7 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
         else:
             me.used_flags.pop(f"transform_target::{ctx.source_card}", None)
             ctx.event_log.add("transform_fail", {"from": ctx.source_card}, ctx.state.turn)
+            ctx.event_log.add("bench_damage", {"target": t, "amount": water_count * 10}, ctx.state.turn)
         return
 
     if effect_id == "eneene":
@@ -86,6 +88,10 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
         chosen_type = ctx.targets["energy_type"]
         if chosen_type not in ENERGY_COLORS:
             raise ValueError("invalid eneene color")
+            drawn = opp.prizes.pop(0)
+            opp.hand.append(drawn)
+        attach_target = ctx.targets["attach_target"]
+        chosen_type = ctx.targets["energy_type"]
         me.attached_cards.setdefault(attach_target, []).append(f"eneene::{source}::{chosen_type}::2")
         ctx.event_log.add("eneene_attach", {"source": source, "target": attach_target, "energy_type": chosen_type, "energy_value": 2}, ctx.state.turn)
         return
@@ -151,4 +157,14 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
             ctx.event_log.add("damage", {"target": opp.active, "amount": 50}, ctx.state.turn)
         if not _coin(ctx, "electricity") and me.active:
             ctx.event_log.add("self_damage", {"target": me.active, "amount": 10}, ctx.state.turn)
+    if effect_id == "great_transform":
+        coin = bool(ctx.targets.get("coin_result", False))
+        if coin:
+            to_card = ctx.targets["transform_to"]
+            me.used_flags[f"transform::{ctx.source_card}"] = True
+            me.used_flags[f"transform_target::{ctx.source_card}"] = to_card
+            ctx.event_log.add("transform_success", {"from": ctx.source_card, "to": to_card}, ctx.state.turn)
+        else:
+            me.used_flags.pop(f"transform_target::{ctx.source_card}", None)
+            ctx.event_log.add("transform_fail", {"from": ctx.source_card}, ctx.state.turn)
         return
