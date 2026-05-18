@@ -29,12 +29,14 @@ class RLEnv:
         self.sim: Simulator | None = None
         self.steps = 0
         self._decoder: dict[int, object] = {}
+        self.invalid_action_count = 0
 
     def reset(self, seed: int | None = None):
         self.seed = self.seed if seed is None else seed
         state = init_game_state(self.self_deck, self.opp_deck, self.seed)
         self.sim = Simulator(state=state, rng=RNG(self.seed))
         self.steps = 0
+        self.invalid_action_count = 0
         obs = build_observation(self.sim.state, "self", asdict(progress_from_log(self.sim.state, self.sim.log)))
         return self.encode_observation(obs), {"seed": self.seed}
 
@@ -62,8 +64,12 @@ class RLEnv:
         prev = progress_from_log(self.sim.state, self.sim.log)
         action = self.decode_action(action_id)
         if action is None:
+            self.invalid_action_count += 1
             obs = build_observation(self.sim.state, "self", asdict(prev))
-            return self.encode_observation(obs), self.reward_fn.cfg.illegal_action, True, False, {"illegal_action": True}
+            return self.encode_observation(obs), self.reward_fn.cfg.illegal_action, True, False, {
+                "illegal_action": True,
+                "invalid_action_count": self.invalid_action_count,
+            }
 
         self.sim.step(action)
         while self.sim.state.active_player != "self" and self.steps < self.max_steps:
@@ -82,4 +88,5 @@ class RLEnv:
 
         obs = build_observation(self.sim.state, "self", asdict(cur))
         info = {"hard_success": hard, "soft_score": int(cur.s1) + int(cur.s2) + int(cur.s3) + int(cur.s4), "event_count": len(self.sim.log.events)}
+        info["invalid_action_count"] = self.invalid_action_count
         return self.encode_observation(obs), reward, terminated, truncated, info
