@@ -29,6 +29,8 @@ class Simulator:
             self._set_active(action)
         elif action.kind == ActionKind.BENCH_BASIC_FROM_HAND:
             self._bench(action)
+        elif action.kind == ActionKind.EVOLVE_FROM_HAND:
+            self._evolve(action)
         elif action.kind == ActionKind.ATTACH_ENERGY:
             self._attach_energy(action)
         elif action.kind == ActionKind.USE_POKEMON_POWER:
@@ -58,6 +60,7 @@ class Simulator:
             raise ValueError("active card must be in hand")
         me.hand.remove(c)
         me.active = c
+        me.used_flags[f"in_play_turn::{c}"] = self.state.turn
 
     def _bench(self, action: Action) -> None:
         me = self.state.players[action.actor_player_id]
@@ -66,7 +69,30 @@ class Simulator:
             raise ValueError("bench card must be in hand")
         me.hand.remove(c)
         me.bench.append(c)
+        me.used_flags[f"in_play_turn::{c}"] = self.state.turn
         self.log.add("bench_added", {"card_id": action.card_id}, self.state.turn)
+
+    def _evolve(self, action: Action) -> None:
+        me = self.state.players[action.actor_player_id]
+        evolve_card = action.card_instance_id
+        target = getattr(action.target, "pokemon_instance_id", None)
+        if evolve_card is None or evolve_card not in me.hand:
+            raise ValueError("evolution card must be in hand")
+        if target is None:
+            raise ValueError("evolution target is required")
+        if me.active == target:
+            me.active = evolve_card
+        else:
+            try:
+                idx = me.bench.index(target)
+            except ValueError as e:
+                raise ValueError("evolution target must be in play") from e
+            me.bench[idx] = evolve_card
+        me.hand.remove(evolve_card)
+        if target in me.attached_cards:
+            me.attached_cards[evolve_card] = me.attached_cards.pop(target)
+        me.used_flags.pop(f"in_play_turn::{target}", None)
+        me.used_flags[f"in_play_turn::{evolve_card}"] = self.state.turn
 
     def _attach_energy(self, action: Action) -> None:
         me = self.state.players[action.actor_player_id]
