@@ -74,7 +74,6 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
         else:
             me.used_flags.pop(f"transform_target::{ctx.source_card}", None)
             ctx.event_log.add("transform_fail", {"from": ctx.source_card}, ctx.state.turn)
-            ctx.event_log.add("bench_damage", {"target": t, "amount": water_count * 10}, ctx.state.turn)
         return
 
     if effect_id == "eneene":
@@ -114,6 +113,8 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
             return
         idx = int(ctx.targets.get("prize_index", 0))
         me.prizes[idx], me.deck[0] = me.deck[0], me.prizes[idx]
+        me.known_prize_slots.pop(idx, None)
+        me.known_prizes = {i for i in me.known_prize_slots if 0 <= i < len(me.prizes)}
         ctx.event_log.add("prize_swap", {"prize_index": idx, "new_deck_top": me.deck[0]}, ctx.state.turn)
         return
 
@@ -157,14 +158,4 @@ def apply_pokemon_effect(effect_id: str, ctx: EffectContext) -> None:
             ctx.event_log.add("damage", {"target": opp.active, "amount": 50}, ctx.state.turn)
         if not _coin(ctx, "electricity") and me.active:
             ctx.event_log.add("self_damage", {"target": me.active, "amount": 10}, ctx.state.turn)
-    if effect_id == "great_transform":
-        coin = bool(ctx.targets.get("coin_result", False))
-        if coin:
-            to_card = ctx.targets["transform_to"]
-            me.used_flags[f"transform::{ctx.source_card}"] = True
-            me.used_flags[f"transform_target::{ctx.source_card}"] = to_card
-            ctx.event_log.add("transform_success", {"from": ctx.source_card, "to": to_card}, ctx.state.turn)
-        else:
-            me.used_flags.pop(f"transform_target::{ctx.source_card}", None)
-            ctx.event_log.add("transform_fail", {"from": ctx.source_card}, ctx.state.turn)
         return

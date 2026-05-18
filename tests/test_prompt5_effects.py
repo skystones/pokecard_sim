@@ -56,3 +56,32 @@ def test_ditto_transform_to_rattata_can_use_mischief():
     assert state.players["self"].used_flags["transform_target::ditto#1"] == "rattata_team_rocket"
     assert state.players["self"].deck[0] == "prize_card"
     assert state.players["self"].prizes[0] == "top_card"
+
+
+def test_mischief_swaps_specified_position_and_marks_it_unknown():
+    state = GameState(players={
+        "self": PlayerState(
+            active="rattata#1",
+            deck=["top_card"],
+            prizes=["prize_a", "prize_b"],
+            known_prizes={0, 1},
+            known_prize_cards={"prize_a", "prize_b"},
+            known_prize_slots={0: "prize_a", 1: "prize_b"},
+        ),
+        "opponent": PlayerState(),
+    }, turn=2)
+    log = EventLog()
+    ctx = EffectContext(
+        state=state,
+        rng=RNG(0),
+        event_log=log,
+        actor_player_id="self",
+        opponent_player_id="opponent",
+        source_card="rattata#1",
+        targets={"prize_index": 0},
+    )
+    apply_pokemon_effect("mischief", ctx)
+    assert state.players["self"].deck[0] == "prize_a"
+    assert state.players["self"].prizes == ["top_card", "prize_b"]
+    assert state.players["self"].known_prizes == {1}
+    assert state.players["self"].known_prize_slots == {1: "prize_b"}

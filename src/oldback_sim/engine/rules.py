@@ -66,10 +66,6 @@ def legal_trainer_actions(state: GameState, player_id: str) -> list[Action]:
         b = _base(c)
         if b not in TRAINERS:
             continue
-        if b == "etiquette" and any(_base(h) in BASIC_POKEMON for h in p.hand) :
-            continue
-        if b == "etiquette" and not any(_base(d) in BASIC_POKEMON for d in p.deck):
-            continue
         if b == "pokemon_trader" and (not any(_base(h) in BASIC_POKEMON for h in p.hand if h != c) or not any(_base(d) in BASIC_POKEMON for d in p.deck)):
             continue
         if b == "recycle" and len(p.discard) == 0:
@@ -110,7 +106,7 @@ def legal_pokemon_power_actions(state: GameState, player_id: str) -> list[Action
             for c in candidates:
                 out.append(Action(kind=ActionKind.USE_POKEMON_POWER, actor_player_id=player_id, card_instance_id=poke, card_id=eff, source_zone=Zone.ACTIVE, target=PokemonTarget(player_id, "active", None, c), params={"ability_id": "great_transform"}))
         if eff == "electrode_base" and not p.used_flags.get(f"used_power::eneene::{poke}"):
-            types = ("grass", "fire", "water", "lightning", "psychic", "fighting", "dark", "metal")
+            types = ("grass", "fire", "water", "lightning", "psychic", "fighting", "darkness", "metal")
             for tgt in in_play:
                 if tgt:
                     for t in types:

@@ -30,6 +30,18 @@ def test_trainer_actions():
     assert not [a for a in legal_actions(s, "self") if a.kind == ActionKind.PLAY_TRAINER]
 
 
+def test_etiquette_is_playable_even_with_basic_in_hand_or_none_in_deck():
+    s = _state(
+        PlayerState(
+            active="ditto#1",
+            hand=["etiquette#1", "voltorb_expansion_sheet#1"],
+            deck=["water_energy#1", "bill#1"],
+        )
+    )
+    trainer_ids = [a.card_id for a in legal_actions(s, "self") if a.kind == ActionKind.PLAY_TRAINER]
+    assert "etiquette" in trainer_ids
+
+
 def test_retreat_actions():
     s = _state(PlayerState(active="ditto#1", bench=["voltorb#1"], attached_cards={"ditto#1": ["water_energy#1"]}, used_flags={"retreat_cost::ditto#1": 0}))
     assert [a for a in legal_actions(s, "self") if a.kind == ActionKind.RETREAT]
@@ -42,6 +54,22 @@ def test_pokemon_power_actions():
     assert [a for a in legal_actions(s, "self") if a.kind == ActionKind.USE_POKEMON_POWER and a.params.get("ability_id") == "great_transform"]
     s.players["self"].used_flags["used_power::great_transform::ditto_expansion_sheet#1"] = True
     assert not [a for a in legal_actions(s, "self") if a.kind == ActionKind.USE_POKEMON_POWER and a.params.get("ability_id") == "great_transform"]
+
+
+def test_sticky_gas_blocks_pokemon_powers():
+    s = _state(PlayerState(active="ditto_expansion_sheet#1", bench=["voltorb#1"]))
+    assert [a for a in legal_actions(s, "self") if a.kind == ActionKind.USE_POKEMON_POWER]
+    s.global_effects = {"sticky_gas_active": True}
+    assert not [a for a in legal_actions(s, "self") if a.kind == ActionKind.USE_POKEMON_POWER]
+
+
+def test_eneene_uses_darkness_type_name():
+    s = _state(PlayerState(active="electrode_base#1", bench=["voltorb#1"]))
+    eneene_actions = [a for a in legal_actions(s, "self") if a.kind == ActionKind.USE_POKEMON_POWER and a.params.get("ability_id") == "eneene"]
+    assert eneene_actions
+    energy_types = {a.params.get("energy_type") for a in eneene_actions}
+    assert "darkness" in energy_types
+    assert "dark" not in energy_types
 
 
 def test_attack_actions_and_end_turn_gate():

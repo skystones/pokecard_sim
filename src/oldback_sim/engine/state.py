@@ -18,6 +18,8 @@ class PlayerState:
     used_flags: dict[str, bool | str] = field(default_factory=dict)
     trainer_lock_until_end_of_turn: bool = False
     known_prizes: set[int] = field(default_factory=set)
+    known_prize_cards: set[CardId] = field(default_factory=set)
+    known_prize_slots: dict[int, CardId] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

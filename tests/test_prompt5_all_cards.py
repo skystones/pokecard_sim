@@ -50,4 +50,4 @@ def test_all_trainers_and_pokemon_smoke():
     apply_energy_effect("full_heal_energy", mkctx(s, {"attach_target": "a"}))
 
     assert s.players["opponent"].trainer_lock_until_end_of_turn is True
-    assert s.global_effects["goop_gas_active"] is True
+    assert s.global_effects["sticky_gas_active"] is True
