@@ -85,8 +85,10 @@ class RLEnv:
         hard = evaluate_hard_success(self.sim.state, self.sim.log)
         if terminated:
             reward += self.reward_fn.terminal_bonus(hard)
+            if self.sim.state.turn > 1 and not cur.t1_hard_bonus:
+                reward += self.reward_fn.cfg.t1_incomplete_penalty
 
         obs = build_observation(self.sim.state, "self", asdict(cur))
-        info = {"hard_success": hard, "soft_score": int(cur.s1) + int(cur.s2) + int(cur.s3) + int(cur.s4), "event_count": len(self.sim.log.events)}
+        info = {"hard_success": hard, "soft_score": int(cur.s1) + int(cur.s2) + int(cur.s3) + int(cur.s4) + int(cur.s5), "event_count": len(self.sim.log.events)}
         info["invalid_action_count"] = self.invalid_action_count
         return self.encode_observation(obs), reward, terminated, truncated, info

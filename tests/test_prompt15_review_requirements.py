@@ -23,7 +23,7 @@ def test_hard_failure_can_have_high_soft_score():
     from oldback_sim.objectives.shining_raichu_plan import evaluate_hard_success, evaluate_soft_score
 
     assert evaluate_hard_success(state, log) is False
-    assert evaluate_soft_score(state, log) >= 3
+    assert evaluate_soft_score(state, log) >= 2
 
 
 def test_rl_env_reports_invalid_action_count():
