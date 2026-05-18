@@ -70,3 +70,31 @@
 | あんこく | `darkness` |
 | でんげき | `electricity` |
 
+
+## 3) ルール用語（日本語が左）
+
+| 日本語（ルール用語） | 英語（プログラム上の表記） |
+|---|---|
+| 手札 | `hand` |
+| 山札 | `deck` |
+| トラッシュ | `discard` |
+| サイド | `prizes` |
+| バトル場 | `active` |
+| ベンチ | `bench` |
+| ターン終了 | `end_turn` |
+| 手札からバトル場に出す | `set_active_from_hand` |
+| 手札からベンチに出す（たね） | `bench_basic_from_hand` |
+| 手札から進化 | `evolve_from_hand` |
+| トレーナーを使う | `play_trainer` |
+| エネルギーをつける | `attach_energy` |
+| にげる | `retreat` |
+| 効果で入れ替える | `switch_by_effect` |
+| 特殊能力を使う | `use_pokemon_power` |
+| ワザを使う | `use_attack` |
+| 手札から選ぶ | `choose_card_from_hand` |
+| 山札から選ぶ | `choose_card_from_deck` |
+| トラッシュから選ぶ | `choose_card_from_discard` |
+| 場のポケモンを選ぶ | `choose_pokemon_in_play` |
+| サイドを取る | `choose_prize` |
+| トラッシュするエネルギーを選ぶ | `choose_energy_to_discard` |
+| エネルギータイプを選ぶ | `choose_energy_type` |
