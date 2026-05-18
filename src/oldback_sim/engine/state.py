@@ -25,4 +25,5 @@ class GameState:
     players: dict[PlayerId, PlayerState]
     turn: int = 1
     active_player: PlayerId = "self"
-    global_effects: dict[str, bool | int | str] = field(default_factory=dict)
+    global_effects: dict[str, bool | int | str | dict] = field(default_factory=dict)
+    is_terminal: bool = False
