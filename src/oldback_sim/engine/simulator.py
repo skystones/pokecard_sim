@@ -107,6 +107,9 @@ class Simulator:
     def _use_pokemon_power(self, action: Action) -> None:
         params = dict(action.params or {})
         tgt = getattr(action.target, "pokemon_instance_id", None)
+        if action.params.get("ability_id") == "engage":
+            # Simulation policy: opponent never chooses ENGAGE redraw.
+            params["opp_return_hand"] = False
         if tgt and "attach_target" not in params:
             params["attach_target"] = tgt
         if action.params.get("ability_id") == "great_transform" and tgt:
@@ -123,6 +126,10 @@ class Simulator:
     def _end_turn(self) -> None:
         cur = self.state.active_player
         self.state.active_player = "opponent" if cur == "self" else "self"
+        # Draw 1 card at the start of the next player's turn.
+        next_player = self.state.players[self.state.active_player]
+        if next_player.deck:
+            next_player.hand.append(next_player.deck.pop(0))
         if self.state.active_player == "self":
             self.state.turn += 1
         for p in self.state.players.values():
