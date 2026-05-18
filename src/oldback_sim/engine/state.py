@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from oldback_sim.cards.effect_context import PlayerId
-
+PlayerId = str
 CardId = str
 
 @dataclass(slots=True)
