@@ -63,7 +63,13 @@ def apply_trainer_effect(effect_id: str, ctx: EffectContext) -> None:
         _draw(me, sh); _draw(opp, oh)
         ctx.event_log.add("trainer_played", {"card_id": "sabrinas_gaze", "self": sh, "opp": oh}, ctx.state.turn); return
     if effect_id == "sticky_gas":
+        blocked = set()
+        for pl in ctx.state.players.values():
+            if pl.active:
+                blocked.add(pl.active)
+            blocked.update(pl.bench)
         ctx.state.global_effects["sticky_gas_active"] = True
+        ctx.state.global_effects["sticky_gas_blocked"] = list(blocked)
         ctx.event_log.add("trainer_played", {"card_id": "sticky_gas"}, ctx.state.turn); return
     if effect_id == "miniskirt":
         my_t, my_o = [c for c in me.hand if c in TRAINERS], [c for c in me.hand if c not in TRAINERS]

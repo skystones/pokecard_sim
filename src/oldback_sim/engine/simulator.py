@@ -79,6 +79,18 @@ class Simulator:
         me.used_flags["used_manual_energy_attachment_this_turn"] = True
 
     def _play_trainer(self, action: Action) -> None:
+        def _pick_by_priority(deck_cards: list[str], priority: list[str]) -> str | None:
+            order = {cid: i for i, cid in enumerate(priority)}
+            best = None
+            best_key = None
+            for c in deck_cards:
+                base = c.split("#", 1)[0]
+                key = (order.get(base, len(order)),)
+                if best is None or key < best_key:
+                    best = c
+                    best_key = key
+            return best
+
         me = self.state.players[action.actor_player_id]
         trainer = action.card_instance_id
         if trainer is None or trainer not in me.hand:
@@ -89,15 +101,18 @@ class Simulator:
         if action.card_id == "pokemon_scoop_up":
             params.setdefault("target", me.active or (me.bench[0] if me.bench else None))
         elif action.card_id == "pokemon_trader":
+            priority = list(params.get("target_priority", []))
             hand_basics = [c for c in me.hand if c.split("#",1)[0] in {"gastly_expansion_sheet","voltorb_expansion_sheet","ditto_expansion_sheet","rattata_team_rocket","unown_e_pf2","shining_raichu"}]
-            deck_basics = [c for c in me.deck if c.split("#",1)[0] in {"gastly_expansion_sheet","voltorb_expansion_sheet","ditto_expansion_sheet","rattata_team_rocket","unown_e_pf2","shining_raichu"}]
-            if hand_basics and deck_basics:
+            deck_basics = [c for c in me.deck if c.split("#",1)[0] in {"gastly_expansion_sheet","voltorb_expansion_sheet","ditto_expansion_sheet","rattata_team_rocket","unown_e_pf2","shining_raichu","shining_kabutops"}]
+            if hand_basics:
                 params.setdefault("return_pokemon", hand_basics[0])
-                params.setdefault("take_pokemon", deck_basics[0])
+                preferred_take = _pick_by_priority(deck_basics, priority) if priority else (deck_basics[0] if deck_basics else None)
+                params.setdefault("take_pokemon", preferred_take or params["return_pokemon"])
         elif action.card_id == "etiquette":
-            deck_basics = [c for c in me.deck if c.split("#",1)[0] in {"gastly_expansion_sheet","voltorb_expansion_sheet","ditto_expansion_sheet","rattata_team_rocket","unown_e_pf2","shining_raichu"}]
-            if deck_basics:
-                params.setdefault("take_basic", deck_basics[0])
+            priority = list(params.get("target_priority", []))
+            deck_basics = [c for c in me.deck if c.split("#",1)[0] in {"gastly_expansion_sheet","voltorb_expansion_sheet","ditto_expansion_sheet","rattata_team_rocket","unown_e_pf2","shining_raichu","shining_kabutops"}]
+            preferred_take = _pick_by_priority(deck_basics, priority) if priority else (deck_basics[0] if deck_basics else None)
+            params.setdefault("take_basic", preferred_take)
         elif action.card_id == "recycle":
             if me.discard:
                 params.setdefault("target", me.discard[0])
