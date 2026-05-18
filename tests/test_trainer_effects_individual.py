@@ -104,7 +104,7 @@ def test_sabrinas_gaze_keeps_hand_sizes_and_changes_order():
 def test_sticky_gas_sets_global_effect_flag():
     s = mkstate()
     apply_trainer_effect("sticky_gas", mkctx(s))
-    assert s.global_effects.get("goop_gas_active") is True
+    assert s.global_effects.get("sticky_gas_active") is True
 
 
 def test_miniskirt_returns_trainers_only():
@@ -126,6 +126,10 @@ def test_team_rocket_announcement_reveals_all_prizes():
     apply_trainer_effect("team_rocket_announcement", mkctx(s))
     assert s.players["self"].known_prizes == {0, 1}
     assert s.players["opponent"].known_prizes == {0, 1}
+    assert s.players["self"].known_prize_cards == {"p1", "p2"}
+    assert s.players["opponent"].known_prize_cards == {"op1", "op2"}
+    assert s.players["self"].known_prize_slots == {0: "p1", 1: "p2"}
+    assert s.players["opponent"].known_prize_slots == {0: "op1", 1: "op2"}
 
 
 def test_pokemon_trader_swaps_hand_pokemon_with_deck_pokemon():
@@ -133,6 +137,7 @@ def test_pokemon_trader_swaps_hand_pokemon_with_deck_pokemon():
     apply_trainer_effect("pokemon_trader", mkctx(s, targets={"return_pokemon": "ditto_expansion_sheet", "take_pokemon": "gastly_expansion_sheet"}))
     assert "ditto_expansion_sheet" not in s.players["self"].hand
     assert "gastly_expansion_sheet" in s.players["self"].hand
+    assert s.players["self"].known_prize_cards == {"p1", "p2"}
 
 
 def test_etiquette_takes_card_from_deck_to_hand():
@@ -140,6 +145,26 @@ def test_etiquette_takes_card_from_deck_to_hand():
     apply_trainer_effect("etiquette", mkctx(s, targets={"take_basic": "d1"}))
     assert "d1" in s.players["self"].hand
     assert "d1" not in s.players["self"].deck
+    assert s.players["self"].known_prize_cards == {"p1", "p2"}
+
+
+def test_etiquette_can_be_used_without_taking_basic():
+    s = mkstate()
+    hand_before = list(s.players["self"].hand)
+    deck_before = sorted(s.players["self"].deck)
+    apply_trainer_effect("etiquette", mkctx(s, targets={}))
+    assert s.players["self"].hand == hand_before
+    assert sorted(s.players["self"].deck) == deck_before
+
+
+def test_deck_search_reveals_unknown_swapped_prize_position_by_elimination():
+    s = mkstate()
+    s.players["self"].known_prize_cards = {"p1", "p2"}
+    s.players["self"].known_prize_slots = {1: "p2"}
+    s.players["self"].known_prizes = {1}
+    apply_trainer_effect("etiquette", mkctx(s, targets={}))
+    assert s.players["self"].known_prize_slots == {0: "p1", 1: "p2"}
+    assert s.players["self"].known_prizes == {0, 1}
 
 
 def test_recycle_heads_behavior_with_retry_up_to_1024():

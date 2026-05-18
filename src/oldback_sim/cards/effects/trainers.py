@@ -12,6 +12,18 @@ def _draw(p, n: int):
     return n
 
 
+def _reconcile_prize_knowledge(p) -> None:
+    p.known_prizes = {i for i in p.known_prize_slots if 0 <= i < len(p.prizes)}
+    if p.known_prize_cards and len(p.known_prize_slots) == len(p.prizes) - 1:
+        unknown_positions = [i for i in range(len(p.prizes)) if i not in p.known_prize_slots]
+        if len(unknown_positions) == 1:
+            remaining = [c for c in p.known_prize_cards if c not in set(p.known_prize_slots.values())]
+            if len(remaining) == 1:
+                pos = unknown_positions[0]
+                p.known_prize_slots[pos] = remaining[0]
+                p.known_prizes.add(pos)
+
+
 def apply_trainer_effect(effect_id: str, ctx: EffectContext) -> None:
     me = ctx.state.players[ctx.actor_player_id]
     opp = ctx.state.players[ctx.opponent_player_id]
@@ -51,7 +63,7 @@ def apply_trainer_effect(effect_id: str, ctx: EffectContext) -> None:
         _draw(me, sh); _draw(opp, oh)
         ctx.event_log.add("trainer_played", {"card_id": "sabrinas_gaze", "self": sh, "opp": oh}, ctx.state.turn); return
     if effect_id == "sticky_gas":
-        ctx.state.global_effects["goop_gas_active"] = True
+        ctx.state.global_effects["sticky_gas_active"] = True
         ctx.event_log.add("trainer_played", {"card_id": "sticky_gas"}, ctx.state.turn); return
     if effect_id == "miniskirt":
         my_t, my_o = [c for c in me.hand if c in TRAINERS], [c for c in me.hand if c not in TRAINERS]
@@ -63,17 +75,23 @@ def apply_trainer_effect(effect_id: str, ctx: EffectContext) -> None:
         ctx.event_log.add("trainer_played", {"card_id": "impostor_professor_oak", "opponent_new_hand": d}, ctx.state.turn); return
     if effect_id == "team_rocket_announcement":
         me.known_prizes = set(range(len(me.prizes))); opp.known_prizes = set(range(len(opp.prizes)))
+        me.known_prize_cards = set(me.prizes); opp.known_prize_cards = set(opp.prizes)
+        me.known_prize_slots = {i: c for i, c in enumerate(me.prizes)}; opp.known_prize_slots = {i: c for i, c in enumerate(opp.prizes)}
         ctx.event_log.add("trainer_played", {"card_id": "team_rocket_announcement"}, ctx.state.turn); return
     if effect_id == "pokemon_trader":
         back = ctx.targets["return_pokemon"]; take = ctx.targets["take_pokemon"]
         if back in me.hand: me.hand.remove(back); me.deck.append(back)
         if take in me.deck: me.deck.remove(take); me.hand.append(take)
         ctx.rng.shuffle(me.deck)
+        me.known_prize_cards = set(me.prizes)
+        _reconcile_prize_knowledge(me)
         ctx.event_log.add("trainer_played", {"card_id": "pokemon_trader", "returned": back, "taken": take}, ctx.state.turn); return
     if effect_id == "etiquette":
-        take = ctx.targets["take_basic"]
-        if take in me.deck: me.deck.remove(take); me.hand.append(take)
+        take = ctx.targets.get("take_basic")
+        if take and take in me.deck: me.deck.remove(take); me.hand.append(take)
         ctx.rng.shuffle(me.deck)
+        me.known_prize_cards = set(me.prizes)
+        _reconcile_prize_knowledge(me)
         ctx.event_log.add("trainer_played", {"card_id": "etiquette", "taken": take}, ctx.state.turn); return
     if effect_id == "recycle":
         ok = ctx.rng.choice([True, False])
